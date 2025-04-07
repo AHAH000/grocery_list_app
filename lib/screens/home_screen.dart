@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:workmanager/workmanager.dart';
+// import 'package:workmanager/workmanager.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
 
         fetchUserName(user!.uid);
-        _registerReminderTask(user!.uid); // ✅ Register task after login
+        // _registerReminderTask(user!.uid); // ✅ Register task after login
       }
     });
   }
@@ -54,18 +54,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ✅ Register periodic background task
-  Future<void> _registerReminderTask(String uid) async {
-    await Workmanager().cancelByUniqueName("grocery_reminder_check");
-    await Workmanager().registerPeriodicTask(
-      "grocery_reminder_check",
-      "groceryReminderCheck",
-      frequency: const Duration(minutes: 15),
-      inputData: {
-        'uid': uid,
-      },
-    );
-    print("🛠️ Background task registered with UID: $uid");
-  }
+  // Future<void> _registerReminderTask(String uid) async {
+  //   await Workmanager().cancelByUniqueName("grocery_reminder_check");
+  //   await Workmanager().registerPeriodicTask(
+  //     "grocery_reminder_check",
+  //     "groceryReminderCheck",
+  //     frequency: const Duration(minutes: 15),
+  //     inputData: {
+  //       'uid': uid,
+  //     },
+  //   );
+  //   print("🛠️ Background task registered with UID: $uid");
+  // }
 
   void signOut() async {
     await _auth.signOut();

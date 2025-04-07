@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AddItemScreen extends StatefulWidget {
   final String listId;
@@ -26,6 +28,27 @@ class _AddItemScreenState extends State<AddItemScreen> {
   ];
 
   final String _defaultImagePath = "images/AddItemimg2.png";
+  static const String _unsplashAccessKey =
+      "wASYLXuTmKgytq8WFKvnTFPxts5X73PUfL5pJ4-AT3o";
+
+  Future<String?> _fetchItemImage(String query) async {
+    final url =
+        "https://api.unsplash.com/search/photos?query=${Uri.encodeComponent(query)}&client_id=$_unsplashAccessKey&per_page=1";
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['results'].isNotEmpty) {
+          return data['results'][0]['urls']['regular'];
+        }
+      }
+    } catch (e) {
+      print("Error fetching Unsplash image: $e");
+    }
+
+    return null;
+  }
 
   Future<void> _addItemToFirestore() async {
     final name = _nameController.text.trim();
@@ -47,13 +70,14 @@ class _AddItemScreenState extends State<AddItemScreen> {
       User? user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("User not found");
 
-      await FirebaseFirestore.instance
+      final itemsCollection = FirebaseFirestore.instance
           .collection("users")
           .doc(user.uid)
           .collection("grocery_lists")
           .doc(widget.listId)
-          .collection("items")
-          .add({
+          .collection("items");
+
+      final docRef = await itemsCollection.add({
         "name": name,
         "quantity": int.tryParse(quantityText) ?? 1,
         "category": _selectedCategory,
@@ -61,6 +85,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
         "purchased": false,
         "createdAt": FieldValue.serverTimestamp(),
       });
+
+      // Fetch image and update
+      final fetchedImage = await _fetchItemImage(name);
+      if (fetchedImage != null) {
+        await docRef.update({"image": fetchedImage});
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -91,7 +121,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // ✅ Enhanced Image Preview
               Center(
                 child: Container(
                   width: 320,
@@ -117,8 +146,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 ),
               ),
               const SizedBox(height: 25),
-
-              // Name Field
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
@@ -129,8 +156,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 ),
               ),
               const SizedBox(height: 15),
-
-              // Quantity Field
               TextField(
                 controller: _quantityController,
                 keyboardType: TextInputType.number,
@@ -142,8 +167,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 ),
               ),
               const SizedBox(height: 15),
-
-              // Category Dropdown
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
                 items: _categories.map((category) {
@@ -163,8 +186,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 ),
               ),
               const SizedBox(height: 25),
-
-              // Submit Button
               _isAdding
                   ? const CircularProgressIndicator()
                   : SizedBox(
